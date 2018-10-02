@@ -1,0 +1,32 @@
+<?php
+
+function zazenbear_checkout_menu() {
+	$menu = array();
+/*
+	$menu["jewelery-list/%"] = array(
+		"page callback" => "jewelery_callback",
+		"page arguments" => array(1),
+		"access callback" => TRUE,
+	);
+
+	$menu["home-list/%"] = array(
+		"page callback" => "home_callback",
+		"page arguments" => array(1),
+		"access callback" => TRUE,
+	);
+
+	$menu["gift-list/%"] = array(
+		"page callback" => "gift_callback",
+		"page arguments" => array(1),
+		"access callback" => TRUE,
+	);
+
+	$menu["fashion-list/%"] = array(
+		"page callback" => "fashion_callback",
+		"page arguments" => array(1),
+		"access callback" => TRUE,
+	);
+*/
+	return $menu;
+}
+

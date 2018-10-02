@@ -1,0 +1,23 @@
+<?php
+   function zazenbearcart_form_uc_cart_view_form_alter(&$form, &$form_state) {
+  $form['items']['#columns']['remove']['weight'] = 3;
+  $form['items']['#columns']['total']['weight'] = 5;
+  $form['items']['#columns']['qty']['weight'] = 4;
+
+  $form['items']['#columns']['price'] = array(
+      'cell' => t('Unit Price'), 
+      'weight' => 4,
+  );
+}
+function zazenbearcart_tapir_table_alter(&$table, $table_id) {
+  if ($table_id == 'uc_cart_view_table') {
+    foreach (element_children($table) as $key) {
+      if (!empty($table['#parameters'][1][$key]['nid'])) {
+        $node = node_load($table['#parameters'][1][$key]['nid']['#value']);
+        $table[$key]['price'] = array(
+          '#markup' => theme('uc_product_price',array('element' => array('#value' => $node->sell_price))),
+        );
+      }
+    }
+  }
+}

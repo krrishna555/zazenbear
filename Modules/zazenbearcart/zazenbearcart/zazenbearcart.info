@@ -1,0 +1,9 @@
+name = Zazenbear Cart
+description = "Customize the cart to show more info"
+package = Zazenbear
+core = 7.x
+; Information added by drupal.org packaging script on 2012-10-02
+version = "7.x-2.2"
+core = "7.x"
+project = "Zazenbear Cart"
+datestamp = "1349213776"

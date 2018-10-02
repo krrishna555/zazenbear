@@ -1,0 +1,4 @@
+name = zazenbear_checkout
+description = zazenbear_checkout custom module
+core = 7.x
+

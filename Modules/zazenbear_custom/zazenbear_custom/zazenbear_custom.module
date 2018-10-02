@@ -1,0 +1,266 @@
+<?php
+
+function zazenbear_custom_menu() {
+	$menu = array();
+
+	$menu["jewelery-list/%"] = array(
+		"title"        => "jewelery categories",
+		"page callback" => "jewelery_callback",
+		"page arguments" => array(1),
+		"access callback" => TRUE,
+	);
+
+	$menu["home-list/%"] = array(
+		"title"        => "home categories",
+		"page callback" => "home_callback",
+		"page arguments" => array(1),
+		"access callback" => TRUE,
+	);
+
+	$menu["gift-list/%"] = array(
+		"title"        => "gift options",
+		"page callback" => "gift_callback",
+		"page arguments" => array(1),
+		"access callback" => TRUE,
+	);
+
+	$menu["fashion-list/%"] = array(
+		"title"        => "fashion categories",
+		"page callback" => "fashion_callback",
+		"page arguments" => array(1),
+		"access callback" => TRUE,
+	);
+
+	return $menu;
+}
+
+
+function title_callback($arg){
+
+  return $arg;
+
+}
+
+
+function zazenbear_custom_theme($existing, $type, $theme, $path) {
+	return array(
+   	'subcategory_display' => array(
+      	'variables' => array(
+        		'subcategory_list' => NULL,
+        		'product_filters' => NULL,
+        		'products' => NULL,
+      	),
+			'template' => 'subcategory_display', 
+			'path' => drupal_get_path('module', 'zazenbear_custom'),
+    	),
+
+   	'subcategory_display_js' => array(
+      	'variables' => array(
+        		'products' => NULL,
+        		'subcategory_list' => NULL,
+        		'selected_subcategory' => NULL,
+      	),
+			'template' => 'subcategory_display_js', 
+			'path' => drupal_get_path('module', 'zazenbear_custom'),
+    	)
+	);
+}
+
+function get_subcategory_list( $nid ) {
+	$result = db_query("
+		SELECT node.nid AS nid, node.title AS node_title, node.created AS node_created, 'node' AS field_data_field_sub_category_image_node_entity_type
+		FROM 
+		{node} node
+		LEFT JOIN {field_data_field_select_main_category} field_data_field_select_main_category ON node.nid = field_data_field_select_main_category.entity_id AND (field_data_field_select_main_category.entity_type = 'node' AND field_data_field_select_main_category.deleted = '0')
+		WHERE (( (node.status = '1') AND (node.type IN  ('product_sub_category')) AND (field_data_field_select_main_category.field_select_main_category_nid IN  ( :nid )) ))
+		ORDER BY node_created DESC",
+		array(':nid' => $nid)
+	);
+
+	$results = array();
+	// Result is returned as a iterable object that returns a stdClass object on each iteration
+	foreach ($result as $record) {
+
+	  // Perform operations on $record->title, etc. here.
+	  // in this example the available data would be mapped to object properties:
+	  // $record->nid, $record->title, $record->created
+		$results[] = array(
+			'nid' => $record->nid,
+			'title'=> $record->node_title
+		);
+	}
+
+	return $results;
+}
+
+function get_products( $nid ) {
+	$result = db_query("
+		SELECT node.nid AS nid, node.created AS node_created
+		FROM 
+		{node} node
+		WHERE (( (node.status = '1') AND (node.type IN  ('product')) ))
+		ORDER BY node_created DESC
+	");
+
+	$results = array();
+	foreach( $result as $record ) {
+		$node = node_load( $record->nid );
+
+		$title = $node->title;
+		//$title = substr($title, 0,20);
+		$title = strip_tags($title);
+		$imageurl = file_create_url($node->uc_product_image['und'][0]['uri']);
+		/*ZBW-145  Durga Added*/
+		$imgChunks = explode("files/", $imageurl);
+		if(empty($imgChunks[1])){
+			$imageurl= $imgChunks[0].'sites/default/files/default_images/image_coming_soon_sub.jpg';
+		}
+		//$originalbody = substr($node->body['und'][0]['value'], 0,100);
+		$originalbody = $node->body['und'][0]['value'];
+		$body = strip_tags($originalbody);
+		$mobile_body = strip_tags(substr($originalbody, 0,25));
+		$price = uc_currency_format($node->sell_price);
+		$price_num = $node->sell_price;
+		$subcategory_node = node_load($node->field_select_product_sub_categor['und'][0]['nid']);
+		$subcategory = $subcategory_node->title;
+		$alias = drupal_get_path_alias( 'node/' . $record->nid );
+		$arrdd = $node->field_material_type['und'];
+		$field_material_typenew = convert_multi_array($arrdd);
+		//print_r($arrdd);
+		//echo implode(" ",$arrdd);
+        //$field_material_type = $node->field_material_type['und'][0]['value'];
+	    // if(empty($field_material_typenew)) { $field_material_typenew='All'; }
+		if (strpos($field_material_typenew,'Rose Gold') !== false) {
+			$field_materialf="Rose Gold";
+		} else if (strpos($field_material_typenew,'White Gold') !== false) {
+			$field_materialf="White Gold";
+		} else if (strpos($field_material_typenew,'Gold') !== false) {
+			$field_materialf="Gold";
+		} else if (strpos($field_material_typenew,'Silver') !== false) {
+			$field_materialf="Silver";
+		} else {
+	        $field_materialf="All";
+		}
+	     $results[] = array(
+			"title" => $title,
+			"path" => $alias,
+			"image_url" => $imageurl,
+			"description" => $body,
+			"mobile_body" => $mobile_body,
+			"price" => $price,
+			"price_num" => $price_num,
+			"subcategory" => $subcategory,
+			"material_type" => $field_materialf,
+		);
+	}
+	return $results;
+}
+function convert_multi_array($array) {
+  $out = implode("&",array_map(function($a) {return implode("~",$a);},$array));
+  return $out;
+}
+
+function fashion_callback( $subcategory ) {
+	$subcategory_list = get_subcategory_list( 66 );
+	$products = get_products( 66 );
+	$product_filters = get_product_filters( 66 );
+
+	return category_callback( $product_filters, $subcategory_list, $products, $subcategory );
+}
+
+function home_callback( $subcategory ) {
+	$subcategory_list = get_subcategory_list( 71 );
+	$products = get_products( 71 );
+	$product_filters = get_product_filters( 71 );
+	return category_callback( $product_filters, $subcategory_list, $products, $subcategory );
+}
+
+function gift_callback( $subcategory ) {
+	$subcategory_list = get_subcategory_list( 76 );
+	$products = get_products( 76 );
+	$product_filters = get_product_filters( 76 );
+
+	return category_callback( $product_filters, $subcategory_list, $products, $subcategory );
+}
+
+function get_product_filters( $nid ) {
+	$product_filters = array(
+		'Filters',
+		'Gold',
+		'White Gold',
+		'Rose Gold',
+		'Silver',
+	);
+    return $product_filters;
+}
+
+function jewelery_callback($subcategory) {
+	$subcategory_list = get_subcategory_list( 51 );
+	$products = get_products( 51 );
+	$product_filters = get_product_filters( 51 );
+	return category_callback( $product_filters, $subcategory_list, $products, $subcategory );
+}
+
+function category_callback( $product_filters, $subcategory_list, $products, $selected_subcategory ) {
+	//print_r($subcategory_list);
+  	//drupal_add_js('https://cdnjs.cloudflare.com/ajax/libs/knockout/3.2.0/knockout-min.js', 'external');
+	drupal_add_js( drupal_get_path( 'module', 'zazenbear_custom' ) . "/knockout-3.2.0.js", 'file' );
+	drupal_add_js( drupal_get_path( 'module', 'zazenbear_custom' ) . "/JSLINQ.js", 'file' );
+
+	drupal_add_js( 
+		theme('subcategory_display_js', 
+			array( 
+				"products" => $products,
+				"subcategory_list" =>  $subcategory_list,
+				"selected_subcategory" => $selected_subcategory,
+			    "product_filters" => $product_filters,
+				"selected_materialtype " => $selected_materialtype,
+			)
+		), 
+		array('type' => 'inline', 'scope' => 'footer', 'weight' => 5)
+	);
+
+	return theme( 'subcategory_display', array(
+		'subcategory_list' => $subcategory_list,
+		'product_filters' => $product_filters,
+		'products' => $products,
+		
+	));
+}
+
+function zazenbear_custom_form_alter(&$form, &$form_state, $form_id) {
+	 if($form_id =='product_node_form') {
+		  $form['field_related_product']['und']['#options'] = categories_options($form_state);
+		  $path = drupal_get_path('module', 'zazenbear_custom');
+		  drupal_add_js ("$path/product_custom.js");
+		  return $form;
+	 }
+	/* 
+	 if($form_id =='mailchimp_signup_subscribe_block_daily_zen_form') {
+       $form['#submit'][] = '_subscribe_site_form_submit';
+     }
+	 */
+}
+function _subscribe_site_form_submit($form, &$form_state) {
+	$form_state['redirect'] = 'subscribe-thanks';
+}
+
+
+function categories_options($form_state) {
+    $result = db_query("
+		SELECT node.nid AS nid, node.created AS node_created
+		FROM 
+		{node} node
+		WHERE (( (node.status = '1') AND (node.type IN  ('product')) ))
+		ORDER BY node_created DESC
+	");
+    $results = array();
+	foreach( $result as $record ) {
+		 $node = node_load( $record->nid );
+		 $niada= $record->nid; 
+         $title = $node->title;
+		 $model = $node->model;
+		 $results[ $niada ] = $title.' ('.$model.')';	
+	}
+    return $results;
+}
